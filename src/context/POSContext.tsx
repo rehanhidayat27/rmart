@@ -196,10 +196,10 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     },
     {
       id: 'notif-2',
-      title: 'Peringatan Stok Menipis',
-      message: '5 produk sembako mendekati batas minimum stok.',
+      title: 'Status Stok Toko',
+      message: 'Seluruh stok barang sembako dalam kondisi aman dan terkendali.',
       time: '10 mnt lalu',
-      type: 'warning',
+      type: 'info',
       read: false,
     },
   ]);

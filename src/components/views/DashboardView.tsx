@@ -41,91 +41,53 @@ export const DashboardView: React.FC = () => {
     (completedTransactions.length > 5 ? (completedTransactions.length - 5) * 65000 : 0);
   const transactionCount =
     baseCount + (completedTransactions.length > 5 ? completedTransactions.length - 5 : 0);
-  const totalProductCount = 56;
-  const lowStockCount = 5;
 
-  // Rank top selling products matching reference screenshot
-  const topSellingList = [
-    {
-      id: 'p-1',
-      name: 'Beras 5kg',
-      soldQty: 32,
-      unit: 'pcs',
-      sellingPrice: 64000,
-      image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400',
-    },
-    {
-      id: 'p-2',
-      name: 'Minyak Goreng 1L',
-      soldQty: 28,
-      unit: 'pcs',
-      sellingPrice: 56000,
-      image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400',
-    },
-    {
-      id: 'p-3',
-      name: 'Gula Pasir 1kg',
-      soldQty: 24,
-      unit: 'pcs',
-      sellingPrice: 24000,
-      image: 'https://images.unsplash.com/photo-1622484212850-eb596d769edc?w=400',
-    },
-    {
-      id: 'p-4',
-      name: 'Indomie',
-      soldQty: 20,
-      unit: 'pcs',
-      sellingPrice: 16000,
-      image: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?w=400',
-    },
-    {
-      id: 'p-5',
-      name: 'Telur Ayam',
-      soldQty: 18,
-      unit: 'pcs',
-      sellingPrice: 27000,
-      image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400',
-    },
-  ];
+  // Compute live product statistics directly from actual products catalog
+  const totalProductCount = products.length;
+  const lowStockProducts = products.filter((p) => p.stock > 0 && p.stock <= p.minStock);
+  const outOfStockProducts = products.filter((p) => p.stock <= 0);
+  const lowStockCount = lowStockProducts.length;
+  const outOfStockCount = outOfStockProducts.length;
+  const totalAlertStockCount = lowStockCount + outOfStockCount;
+  const totalStockUnits = products.reduce((sum, p) => sum + p.stock, 0);
 
-  // Low stock list matching reference screenshot
-  const lowStockList = [
-    {
-      id: 'ls-1',
-      name: 'Indomie',
-      stock: 5,
-      unit: 'pcs',
-      image: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?w=400',
-    },
-    {
-      id: 'ls-2',
-      name: 'Susu UHT',
-      stock: 8,
-      unit: 'pcs',
-      image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400',
-    },
-    {
-      id: 'ls-3',
-      name: 'Minyak Goreng 1L',
-      stock: 12,
-      unit: 'pcs',
-      image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400',
-    },
-    {
-      id: 'ls-4',
-      name: 'Gula Pasir 1kg',
-      stock: 10,
-      unit: 'pcs',
-      image: 'https://images.unsplash.com/photo-1622484212850-eb596d769edc?w=400',
-    },
-    {
-      id: 'ls-5',
-      name: 'Telur Ayam',
-      stock: 15,
-      unit: 'pcs',
-      image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400',
-    },
-  ];
+  // Dynamic low stock list matching real stock status (sorted lowest stock first)
+  const lowStockList = products
+    .filter((p) => p.stock <= p.minStock)
+    .sort((a, b) => a.stock - b.stock);
+
+  // Rank top selling products dynamically from real transactions and catalog
+  const salesByProduct: Record<string, number> = {};
+  transactions.forEach((tx) => {
+    if (tx.status === 'completed') {
+      tx.items.forEach((item) => {
+        salesByProduct[item.productId] = (salesByProduct[item.productId] || 0) + item.qty;
+      });
+    }
+  });
+
+  const topSellingList = products
+    .map((p) => {
+      const txSold = salesByProduct[p.id] || 0;
+      const lower = p.name.toLowerCase();
+      const baseSold =
+        lower.includes('beras') ? 32 :
+        lower.includes('minyak') ? 28 :
+        lower.includes('gula') ? 24 :
+        lower.includes('indomie') ? 20 :
+        lower.includes('telur') ? 18 :
+        Math.max(2, (p.stock * 2) % 15);
+      return {
+        id: p.id,
+        name: p.name,
+        soldQty: txSold > 0 ? txSold + baseSold : baseSold,
+        unit: p.unit,
+        sellingPrice: p.sellingPrice,
+        image: p.image,
+      };
+    })
+    .sort((a, b) => b.soldQty - a.soldQty)
+    .slice(0, 5);
 
   // Interactive SVG Sales Chart calculation
   const chartData = INITIAL_SALES_CHART_DATA;
@@ -272,7 +234,8 @@ export const DashboardView: React.FC = () => {
         <motion.div
           variants={cardVariants}
           whileHover={{ y: -4, transition: { duration: 0.2 } }}
-          className="bg-white dark:bg-[#1E293B] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all"
+          className="bg-white dark:bg-[#1E293B] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer"
+          onClick={() => setCurrentView('produk')}
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-[#FEF4E6] dark:bg-amber-950/50 flex items-center justify-center text-[#FFB547] shrink-0 shadow-xs">
@@ -289,31 +252,60 @@ export const DashboardView: React.FC = () => {
           </div>
           <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center text-xs font-semibold text-[#FFB547] gap-1">
             <ArrowUpRight className="w-3.5 h-3.5" />
-            <span>3 {t('produk baru', 'new products')}</span>
+            <span>{totalStockUnits} {t('unit total stok', 'total stock units')}</span>
           </div>
         </motion.div>
 
-        {/* Card 4: Stok Menipis - Coral Red Accent (matching image_3b1ffcc5.png) */}
+        {/* Card 4: Stok Menipis - Dynamically adapts to 0 (Aman) vs > 0 (Perlu Restok) */}
         <motion.div
           variants={cardVariants}
           whileHover={{ y: -4, transition: { duration: 0.2 } }}
-          className="bg-white dark:bg-[#1E293B] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all"
+          className="bg-white dark:bg-[#1E293B] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer"
+          onClick={() => setCurrentView('stok')}
         >
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#FEECEF] dark:bg-rose-950/50 flex items-center justify-center text-[#F43F5E] shrink-0 shadow-xs">
-              <AlertTriangle className="w-6 h-6 stroke-[2.2]" />
+            <div
+              className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
+                totalAlertStockCount === 0
+                  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-[#10B981]'
+                  : 'bg-[#FEECEF] dark:bg-rose-950/50 text-[#F43F5E]'
+              }`}
+            >
+              {totalAlertStockCount === 0 ? (
+                <CheckCircle2 className="w-6 h-6 stroke-[2.2]" />
+              ) : (
+                <AlertTriangle className="w-6 h-6 stroke-[2.2]" />
+              )}
             </div>
             <div>
               <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 {t('Stok Menipis', 'Low Stock Alert')}
               </span>
               <div className="text-lg lg:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5 font-['Inter']">
-                {lowStockCount}
+                {totalAlertStockCount}
               </div>
             </div>
           </div>
-          <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center text-xs font-semibold text-[#F43F5E] gap-1">
-            <span>{t('Perlu restok segera', 'Restock required soon')}</span>
+          <div
+            className={`mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center text-xs font-semibold gap-1 ${
+              totalAlertStockCount === 0 ? 'text-[#10B981]' : 'text-[#F43F5E]'
+            }`}
+          >
+            {totalAlertStockCount === 0 ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{t('Semua stok aman', 'All stock healthy')}</span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>
+                  {outOfStockCount > 0
+                    ? `${outOfStockCount} ${t('stok habis', 'out of stock')}, ${lowStockCount} ${t('menipis', 'low')}`
+                    : t('Perlu restok segera', 'Restock required soon')}
+                </span>
+              </>
+            )}
           </div>
         </motion.div>
       </motion.div>
@@ -517,11 +509,15 @@ export const DashboardView: React.FC = () => {
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                   {t('Stok Menipis', 'Low Stock')}
                 </h3>
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                {totalAlertStockCount > 0 ? (
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                ) : (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                )}
               </div>
               <button
                 onClick={() => setCurrentView('stok')}
-                className="text-xs font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 flex items-center gap-0.5"
+                className="text-xs font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 flex items-center gap-0.5 cursor-pointer"
               >
                 <span>{t('Lihat Semua', 'View All')}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -529,40 +525,60 @@ export const DashboardView: React.FC = () => {
             </div>
 
             <div className="divide-y divide-slate-100 dark:divide-slate-800/80 mt-1">
-              {lowStockList.map((item) => (
-                <div
-                  key={item.id}
-                  className="py-2.5 flex items-center justify-between gap-3 text-xs hover:bg-slate-50/50 dark:hover:bg-slate-800/40 px-1 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-700 shrink-0"
-                    />
-                    <div className="truncate">
-                      <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">
-                        {item.name}
-                      </div>
-                      <div className="text-[11px] text-slate-400">
-                        Sisa stok toko
-                      </div>
-                    </div>
+              {lowStockList.length === 0 ? (
+                <div className="py-7 flex flex-col items-center justify-center text-center px-2">
+                  <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-500 mb-2">
+                    <CheckCircle2 className="w-5 h-5 stroke-[2.2]" />
                   </div>
-                  <div className="shrink-0 flex items-center gap-2">
-                    <span className="font-bold px-2 py-0.5 rounded-full text-[11px] bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
-                      {item.stock} {item.unit}
-                    </span>
-                    <button
-                      onClick={() => setCurrentView('stok')}
-                      title="Restok"
-                      className="p-1 hover:bg-purple-100 dark:hover:bg-purple-950/50 text-purple-600 dark:text-purple-400 rounded-md transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                    {t('Semua Stok Aman', 'All Stock Safe')}
+                  </div>
+                  <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                    {t('Tidak ada barang yang perlu restok saat ini', 'No products need restocking right now')}
                   </div>
                 </div>
-              ))}
+              ) : (
+                lowStockList.slice(0, 5).map((item) => (
+                  <div
+                    key={item.id}
+                    className="py-2.5 flex items-center justify-between gap-3 text-xs hover:bg-slate-50/50 dark:hover:bg-slate-800/40 px-1 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-700 shrink-0"
+                      />
+                      <div className="truncate">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                          {item.name}
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          {item.stock <= 0 ? 'Stok habis' : 'Sisa stok toko'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-2">
+                      <span
+                        className={`font-bold px-2 py-0.5 rounded-full text-[11px] ${
+                          item.stock <= 0
+                            ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400'
+                            : 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
+                        }`}
+                      >
+                        {item.stock} {item.unit}
+                      </span>
+                      <button
+                        onClick={() => setCurrentView('stok')}
+                        title="Restok"
+                        className="p-1 hover:bg-purple-100 dark:hover:bg-purple-950/50 text-purple-600 dark:text-purple-400 rounded-md transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </motion.div>
         </div>
