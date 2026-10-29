@@ -1,0 +1,6 @@
+{
+  "name": "RMart POS — Modern POS & Grocery Management System",
+  "description": "Sistem Kasir Point of Sale (POS) modern untuk toko sembako RMart dengan manajemen produk, inventaris stok, laporan penjualan, dan struk PDF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
