@@ -42,7 +42,7 @@ export const CashierView: React.FC = () => {
   // Filter products by category & search query
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      if (p.status !== 'active') return false;
+      if (p.status === 'inactive') return false;
       const matchesCategory =
         selectedCategory === 'all' || p.categoryId === selectedCategory;
       const query = searchQuery.trim().toLowerCase();
@@ -50,7 +50,7 @@ export const CashierView: React.FC = () => {
         !query ||
         p.name.toLowerCase().includes(query) ||
         p.sku.toLowerCase().includes(query) ||
-        p.barcode.includes(query);
+        (p.barcode && p.barcode.includes(query));
       return matchesCategory && matchesSearch;
     });
   }, [products, selectedCategory, searchQuery]);
@@ -106,7 +106,10 @@ export const CashierView: React.FC = () => {
           {/* Category Pills Bar matching reference screenshot */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
             <button
-              onClick={() => setSelectedCategory('all')}
+              onClick={() => {
+                setSelectedCategory('all');
+                setSearchQuery('');
+              }}
               className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory === 'all'
                   ? 'text-white shadow-md shadow-purple-900/30'
@@ -120,15 +123,21 @@ export const CashierView: React.FC = () => {
                   : undefined
               }
             >
-              Semua
+              Semua ({products.filter((p) => p.status !== 'inactive').length})
             </button>
 
             {categories.map((cat) => {
               const isSelected = selectedCategory === cat.id;
+              const count = products.filter(
+                (p) => p.categoryId === cat.id && p.status !== 'inactive'
+              ).length;
               return (
                 <button
                   key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
+                  onClick={() => {
+                    setSelectedCategory(cat.id);
+                    setSearchQuery('');
+                  }}
                   className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     isSelected
                       ? 'text-white shadow-md shadow-purple-900/30'
@@ -143,7 +152,7 @@ export const CashierView: React.FC = () => {
                       : undefined
                   }
                 >
-                  {cat.name}
+                  {cat.name} ({count})
                 </button>
               );
             })}

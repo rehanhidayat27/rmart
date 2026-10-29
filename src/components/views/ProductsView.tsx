@@ -23,7 +23,7 @@ export const ProductsView: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'available' | 'low' | 'out'>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [itemsPerPage, setItemsPerPage] = useState<number>(20);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
@@ -39,7 +39,7 @@ export const ProductsView: React.FC = () => {
         !query ||
         p.name.toLowerCase().includes(query) ||
         p.sku.toLowerCase().includes(query) ||
-        p.barcode.includes(query);
+        (p.barcode && p.barcode.includes(query));
 
       let matchesStock = true;
       if (stockFilter === 'available') matchesStock = p.stock > p.minStock;
@@ -129,6 +129,62 @@ export const ProductsView: React.FC = () => {
               ))}
             </select>
           </div>
+        </div>
+
+        {/* Category Pills Bar matching Kasir view */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+          <button
+            onClick={() => {
+              setSelectedCategory('all');
+              setSearchQuery('');
+              setStockFilter('all');
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              selectedCategory === 'all'
+                ? 'text-white shadow-md shadow-purple-900/30'
+                : 'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'
+            }`}
+            style={
+              selectedCategory === 'all'
+                ? {
+                    background: 'linear-gradient(135deg, #6336C9 0%, #F56B83 100%)',
+                  }
+                : undefined
+            }
+          >
+            Semua ({products.length})
+          </button>
+
+          {categories.map((c) => {
+            const count = products.filter((p) => p.categoryId === c.id).length;
+            const isSelected = selectedCategory === c.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => {
+                  setSelectedCategory(c.id);
+                  setSearchQuery('');
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  isSelected
+                    ? 'text-white shadow-md shadow-purple-900/30'
+                    : 'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800'
+                }`}
+                style={
+                  isSelected
+                    ? {
+                        background:
+                          'linear-gradient(135deg, #6336C9 0%, #F56B83 100%)',
+                      }
+                    : undefined
+                }
+              >
+                {c.name} ({count})
+              </button>
+            );
+          })}
         </div>
 
         {/* Data Table matching screenshot */}
@@ -240,17 +296,35 @@ export const ProductsView: React.FC = () => {
 
         {/* Footer & Pagination matching screenshot */}
         <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
-          <div>
-            Menampilkan{' '}
-            <span className="font-semibold text-slate-800 dark:text-slate-200">
-              {totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} -{' '}
-              {Math.min(currentPage * itemsPerPage, totalItems)}
-            </span>{' '}
-            dari{' '}
-            <span className="font-semibold text-slate-800 dark:text-slate-200">
-              {totalItems}
-            </span>{' '}
-            data
+          <div className="flex items-center gap-3 flex-wrap">
+            <div>
+              Menampilkan{' '}
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
+                {totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} -{' '}
+                {Math.min(currentPage * itemsPerPage, totalItems)}
+              </span>{' '}
+              dari{' '}
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
+                {totalItems}
+              </span>{' '}
+              data
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px]">
+              <span>Baris per halaman:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="py-1 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-slate-700 dark:text-slate-300 font-semibold"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={9999}>Semua</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex items-center gap-1 self-center sm:self-auto">
